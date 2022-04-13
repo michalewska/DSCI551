@@ -1,0 +1,223 @@
+---
+title: "USC Crime Statistics"
+author: "Jack Weyer"
+date: "3/13/2022"
+output: pdf_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(lubridate)
+df <- read_xlsx('uscAnnualCrime.xlsx')
+```
+
+
+
+
+```{r}
+df = df %>%
+  filter(Offenses!='N/A')
+df$Offenses = as.numeric(df$Offenses)
+df$Year = as.numeric(df$Year)
+```
+
+```{r}
+df %>%
+  group_by(Year) %>%
+  summarise(totOff = sum(Offenses))
+```
+
+
+```{r}
+df %>%
+  group_by(Year) %>%
+  summarise(totOff = sum(Offenses)) %>%
+  ggplot(aes(x=Year, y=totOff)) +
+  geom_point(color='#FFCC00',size=5) +
+  geom_line(color='#990000',size=2) +
+  labs(x='Year', y='Total Offenses', title = 'Reported Crimes by year at USC University Park campus', subtitle = 'Source: USC 2021 Annual Security & Fire Safety Report')+
+  scale_y_continuous(limit=c(0,700))+
+  theme_tufte()+
+  theme(plot.title = element_text(hjust=0.5, size=18),
+        plot.subtitle = element_text(hjust=0.5))
+```
+
+```{r}
+df$Year = as.factor(df$Year)
+df %>%
+  group_by(Category, Year) %>%
+  summarise(totOff = sum(Offenses)) %>%
+  ggplot(aes(x=totOff, y=reorder(Category, totOff), fill=forcats::fct_rev(Year)))+
+  scale_fill_manual(values=c('#990000','#FFCC00','#CCCCCC',                   '#777777'))+
+  geom_bar(stat='identity') +
+  labs(x='Total Offenses', y='', title = 'Reported Crime at USC from 2017 - 2020', fill='Year')+
+  theme_minimal()
+```
+
+```{r}
+USCalerts <- read_csv("C:/Users/jack_/Desktop/USC/sem 2/USCcrimes.csv")
+```
+##Day of the Week Analysis
+
+```{r}
+USCalerts %>%
+  group_by(Weekday) %>%
+  summarise(n=n()) %>%
+  ggplot(aes(x=Weekday, y=n, fill=factor(ifelse(Weekday=='Saturday', "Highlighted","Normal"))))+
+  scale_x_discrete(limits=c('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'))+
+  geom_bar(stat='identity')+
+  scale_fill_manual(name="Weekday", values=c("#990000","#FFCC00"))+
+  labs(title='Saturdays see the most crime alerts at USC', y='Crime Alerts', x='')+
+  theme_clean()+
+  theme(legend.position = "none",
+        axis.title.y = element_text(size=14))
+```
+```{r}
+weekdays = USCalerts %>%
+  group_by(Weekday) %>%
+  summarise(n=n())
+
+set.seed(509)
+sims=matrix(0,10000,7)
+
+for (sim in c(1:10000)){
+  altUniverse = as.data.frame(ceiling(runif(170,0,7)))
+  dailyCrimes = altUniverse %>% group_by(ceiling(runif(170,0,7))) %>%
+  summarise(n=n())
+  sims[sim,]=dailyCrimes$n
+}
+```
+
+```{r}
+randoms=0
+for (row in c(1:10000)){
+  if (max(sims[row,]) >= 31){
+   randoms= randoms+1
+  }
+}
+randoms/10000
+# P-value of .54. Given 170 alerts and 7 days of the week, there is a 54% chance the observed Saturday disparity is due to luck. Therefore we **Cannot** say that Saturday is a *significantly* more dangerous time given our data.
+```
+
+##Month Analysis
+
+```{r}
+USCalerts = USCalerts %>%
+  mutate(Month = month(as.POSIXlt(Date, format="%m/%d/%Y")),
+         Month = ifelse(grepl('Jan', Date),1,Month),
+         Month = ifelse(grepl('Feb', Date),2,Month),
+         Month = ifelse(grepl('Mar', Date),3,Month),
+         Month = ifelse(grepl('Apr', Date),4,Month),
+         Month = ifelse(grepl('May', Date),5,Month),
+         Month = ifelse(grepl('Jun', Date),6,Month),
+         Month = ifelse(grepl('Jul', Date),7,Month),
+         Month = ifelse(grepl('Aug', Date),8,Month),
+         Month = ifelse(grepl('Sep', Date),9,Month),
+         Month = ifelse(grepl('Oct', Date),10,Month),
+         Month = ifelse(grepl('Nov', Date),11,Month),
+         Month = ifelse(grepl('Dec', Date),12,Month)
+  )
+```
+
+```{r}
+USCalerts %>%
+  mutate(Month2 = case_when(Month==1 ~ 'Jan',
+                            Month==2 ~ 'Feb',
+                            Month==3 ~ 'Mar',
+                            Month==4 ~ 'Apr',
+                            Month==5 ~ 'May',
+                            Month==6 ~ 'Jun',
+                            Month==7 ~ 'Jul',
+                            Month==8 ~ 'Aug',
+                            Month==9 ~ 'Sep',
+                            Month==10 ~ 'Oct',
+                            Month==11 ~ 'Nov',
+                            Month==12 ~ 'Dec')) %>%
+  group_by(Month2) %>%
+  summarise(n=n()) %>%
+  ggplot(aes(x=Month2,y=n, fill=factor(ifelse(Month2 %in% c("Jan", 'Apr', 'Aug', 'Nov'), "Highlighted","Normal"))))+
+  scale_x_discrete(limits=c('Jan','Feb','Mar','Apr','May','Jun','Jul',
+                            'Aug', 'Sep', 'Oct', 'Nov', 'Dec'))+
+  geom_bar(stat = 'identity')+
+  scale_fill_manual(name="Month2", values=c("#990000","#FFCC00"))+
+  theme_clean()+
+  theme(legend.position = 'none',
+        axis.title.y = element_text(size=14))+
+  labs(x='', y='Crime Alerts', title='Crime Alert trend by Month')
+```
+
+##Crime alert trend by hour
+
+#pseudocode:
+for each USCalerts$Date:
+find location of colon
+store substring ranging from location-2 to location-1 (hours)
+store as integer
+if p.m in string, add 12 to integer
+(special cases: 12 am is 0 and 12 pm is 12)
+set to hour variable
+
+```{r}
+for (row in c(1:nrow(USCalerts))){
+  specific = USCalerts$Date[row]
+  colon = unlist(gregexpr(':', specific))
+  USCalerts$Hour[row] = as.integer(substr(specific, colon-2, colon-1))
+  if (grepl('p.m', specific, fixed=T)){
+    USCalerts$Hour[row] = USCalerts$Hour[row] +12
+  }
+}
+
+USCalerts$Hour<- replace(USCalerts$Hour, USCalerts$Hour==12,0)
+USCalerts$Hour<- replace(USCalerts$Hour, USCalerts$Hour==24,12)
+```
+
+```{r}
+USCalerts %>% group_by(Hour) %>%
+  summarise(n=n()) %>%
+  ggplot(aes(x=Hour,y=n))+
+  geom_bar(stat='identity')
+```
+
+## Sexual Crimes Analysis
+
+```{r}
+USCalerts %>%
+  group_by(Crime) %>%
+  summarise(n=n()) %>%
+  arrange(desc(n))
+```
+
+
+```{r}
+USCalerts %>%
+  filter(Crime %in% c('Sexual Battery/Fondling', 'Sexual Battery', 'Lewd Conduct','Sexual Battery (Suspect in Custody)', 'Sexual Assault', 'Fondling/Sexual Battery', 'Lewd Conduct and Indecent Exposure', 'Rape','sexual assault', 'Sexual battery/fondling')) %>%
+  group_by(Weekday) %>%
+  summarise(n=n()) %>%
+  ggplot(aes(x=Weekday, y=n))+
+  scale_x_discrete(limits=c('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'))+
+  geom_bar(stat='identity')+
+  labs(title='Saturdays twice as dangerous for sexual crimes', y='Crime Alerts', x='')
+```
+```{r}
+USCalerts %>%
+  filter(Crime %in% c('Sexual Battery/Fondling', 'Sexual Battery', 'Lewd Conduct','Sexual Battery (Suspect in Custody)', 'Sexual Assault', 'Fondling/Sexual Battery', 'Lewd Conduct and Indecent Exposure', 'Rape','sexual assault', 'Sexual battery/fondling')) %>%
+  group_by(Hour) %>%
+  summarise(n=n()) %>%
+  ggplot(aes(x=Hour,y=n))+
+  geom_bar(stat='identity')+
+  labs(title='Sexual Crimes by hour')
+```
+```{r}
+USCalerts %>%
+  filter(Crime %in% c('Sexual Battery/Fondling', 'Sexual Battery', 'Lewd Conduct','Sexual Battery (Suspect in Custody)', 'Sexual Assault', 'Fondling/Sexual Battery', 'Lewd Conduct and Indecent Exposure', 'Rape','sexual assault', 'Sexual battery/fondling')) %>%
+  filter(Weekday == "Saturday") %>%
+  group_by(Hour) %>%
+  summarise(n=n()) %>%
+  ggplot(aes(x=Hour, y=n))+
+  geom_bar(stat = 'identity')
+```
