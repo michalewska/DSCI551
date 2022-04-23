@@ -142,7 +142,7 @@ if choose == "Crime Reports":
     st.write("**More crime alerts occur on Saturday than any other day of the week.**")
     st.markdown('<p class="graphs">Crime By Month</p>', unsafe_allow_html=True)
     st.image(crimeMonthly, width=600 )
-    st.write("**The number of crime alerts reported by the Department of Public Safety follows a cyclical pattern, with outliers in April, August, and November.**")
+    st.write("**The number of crime alerts reported by the Department of Public Safety follows a cyclical pattern, with outliers in January, April, August, and November.**")
     st.markdown('<p class="graphs">Crime By Year</p>', unsafe_allow_html=True)
     st.image(crimeYearly, width=600 )
     st.write("**The University Park campus averaged over 400 reported offenses per year from 2017-2020.**")
