@@ -67,8 +67,8 @@ def insertVaribleIntoTable(crime, date, weekday, location, latitude, longitude):
         c.execute(sqlite_insert_with_param, data_tuple)
         conn.commit()
         print("Python Variables inserted successfully into SqliteDb_developers table")
-        result = view_all_notes()
-        st.write(result)
+        #result = view_all_notes()
+        #st.write(result)
 
         c.close()
 
@@ -219,8 +219,8 @@ if choose == "Report a Crime":
         st.image(logo, width=80 )
 
     with st.form(key='columns_in_form2',clear_on_submit=True):
-        result = view_all_notes()
-        st.write(result)
+        #result = view_all_notes()
+        #st.write(result)
         crime_type = st.selectbox('Type of Crime',
         ('Rape', 'Drug Violation', 'Burglary', 'Robbery', 'Liquor Law Violation',
         'Motor Vehicle Theft', 'Fondling', 'Aggravated Assault', 'Stalking',
@@ -250,7 +250,7 @@ if choose == "Report a Crime":
 
         if submitted:
             st.write('Thank you, the crime report has been submitted!')
-        insertVaribleIntoTable(crime_type, crime_date, crime_weekday, crime_location, crime_lat, crime_lon)
+            insertVaribleIntoTable(crime_type, crime_date, crime_weekday, crime_location, crime_lat, crime_lon)
             # send input data to database!!!!
 
 
