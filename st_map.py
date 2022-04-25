@@ -38,46 +38,18 @@ conn = sqlite3.connect("data_incident.db")
 c = conn.cursor()
 print("Successfully Connected to SQLite")
 
-c.execute("DROP TABLE if exists usc_incident_data")
-crimes_data_df.to_sql(name='usc_incident_data', con=conn, index = False)
-conn.commit()
 
 def view_all_notes():
-	c.execute('SELECT * FROM usc_incident_data')
-	data = c.fetchall()
-	return data
+    c.execute('SELECT * FROM usc_incident_data;')
+    conn.commit()
+    data = c.fetchall()
+    return data
+    #conn.commit()
+    #return data
 
 #pd.set_option('display.max_colwidth', None)
 #clean_db = pd.DataFrame(view_all_notes(), columns = ['Crime', 'Date', 'Weekday', 'Location', 'Latitude', 'Longitude'])
 #st.dataframe(clean_db)
-
-def insertVaribleIntoTable(crime, date, weekday, location, latitude, longitude):
-    try:
-        #sqliteConnection = sqlite3.connect('data_incident.db')
-        #cursor = sqliteConnection.cursor()
-        #print("Connected to SQLite")
-        conn = sqlite3.connect("data_incident.db")
-        c = conn.cursor()
-
-        sqlite_insert_with_param = """INSERT OR IGNORE INTO usc_incident_data
-                          (crime, date, weekday, location, latitude, longitude)
-                          VALUES (?, ?, ?, ?, ?, ?);"""
-
-        data_tuple = (crime, date, weekday, location, latitude, longitude)
-        c.execute(sqlite_insert_with_param, data_tuple)
-        conn.commit()
-        print("Python Variables inserted successfully into SqliteDb_developers table")
-        #result = view_all_notes()
-        #st.write(result)
-
-        c.close()
-
-    except sqlite3.Error as error:
-        print("Failed to insert Python variable into sqlite table", error)
-    finally:
-        if conn:
-            conn.close()
-            print("The SQLite connection is closed")
 
 
 
@@ -201,7 +173,7 @@ if choose == "Crime Map":
                 lon = row['lon']
                 tooltip = row['Crime']
                 popup = row['Crime'], row['Date']
-                print(row['lat'])
+                #print(row['lat'])
                 folium.Marker(
                     [lat, lon], popup= popup, tooltip=tooltip, icon=folium.Icon(color='blue')).add_to(m)
             folium_static(m)
@@ -250,8 +222,18 @@ if choose == "Report a Crime":
 
         if submitted:
             st.write('Thank you, the crime report has been submitted!')
-            insertVaribleIntoTable(crime_type, crime_date, crime_weekday, crime_location, crime_lat, crime_lon)
+            with conn:
+                c.execute("DROP TABLE if exists usc_incident_data;")
+                #c.execute("CREATE TABLE IF NOT EXISTS usc_incident_data (Crime STRING, Date STRING, Weekday STRING, Location STRING, Latitude FLOAT, Longitude FLOAT);")
+                crimes_data_df.to_sql(name='usc_incident_data', con=conn, index = False)
+                conn.commit()
+
+                crime_tuple = (crime_type, crime_date, crime_weekday, crime_location, crime_lat, crime_lon)
+                c.execute("INSERT OR IGNORE INTO usc_incident_data VALUES (?, ?, ?, ?, ?, ?);", crime_tuple)
+                conn.commit()
+                print(c.lastrowid)
             # send input data to database!!!!
+
 
 
 if choose == "Emergency Contacts":
